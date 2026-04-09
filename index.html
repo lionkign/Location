@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تۆماری لۆکەیشنی بنکەکان | IHEC</title>
+    <title>تۆماری لۆکەیشنی بنکەکان</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;700&display=swap" rel="stylesheet">
@@ -77,17 +77,17 @@
 
 <div class="container">
     <div class="icon-box">📍</div>
-    <h2>تۆمارکردنی لۆکەیشنی بنکە</h2>
+    <h2>تۆمارکردنی لۆکەیشن</h2>
     <p>تکایە مەجوڵێ تاوەکو وردترین لۆکەیشن تۆمار دەکرێت</p>
 
     <div class="input-group">
-        <label>ژمارەی بنکە (Office ID)</label>
-        <input type="number" id="branchID" placeholder="نموونە: 1">
+        <label>ژمارەی بنکەی تۆمار</label>
+        <input type="number" id="branchID" placeholder="نموونە: 1200">
     </div>
 
     <div class="input-group">
-        <label>ناوی بنکە (Office Name)</label>
-        <input type="text" id="branchName" placeholder="نموونە: بنکەی حسارۆک">
+        <label>ناوی بنکەی تۆمار</label>
+        <input type="text" id="branchName" placeholder="نموونە: حساروك">
     </div>
 
     <button id="sendBtn" onclick="processLocation()">
@@ -100,7 +100,6 @@
 </div>
 
 <script>
-    // زانیارییەکانی سوپابەیس
     const SUPABASE_URL = 'https://ihejchpsjhzifkycacnt.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloZWpjaHBzamh6aWZreWNhY250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjA1MTUsImV4cCI6MjA5MTI5NjUxNX0.Slre8cX9dR-o8S_jXVjlDFLbUFMv-pe9J8P-ZNs2qSw';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -127,18 +126,20 @@
         let count = 0;
 
         if (navigator.geolocation) {
+            // دەستپێکردنی چاودێری بەردەوام بۆ دۆزینەوەی وردترین خاڵ
             watchID = navigator.geolocation.watchPosition(async (position) => {
                 count++;
                 const currentAcc = position.coords.accuracy;
                 
+                // نوێکردنەوەی نوسینی سەر دوگمەکە بۆ ئەوەی بەکارهێنەر وردیەکە ببینێت
                 btnText.innerText = `وردی: ${Math.round(currentAcc)}m (هەوڵی ${count})`;
 
                 if (!bestPosition || currentAcc < bestPosition.coords.accuracy) {
                     bestPosition = position;
                 }
 
-                // ئەگەر وردیەکە گەیشتە ژێر ١٥ مەتر یان ١٢ جار هەوڵی دا، پاشەکەوتی بکە
-                if (currentAcc <= 15 || count >= 12) {
+                // ئەگەر وردیەکە گەیشتە ژێر ٢٠ مەتر یان ١٠ جار هەوڵی دا، پاشەکەوتی بکە
+                if (currentAcc <= 20 || count >= 10) {
                     stopAndSave(bestPosition, branchID, branchName);
                 }
 
@@ -147,7 +148,7 @@
                 stopWatch();
             }, { enableHighAccuracy: true, timeout: 45000, maximumAge: 0 });
 
-            // کاتی چاوەڕوانی کۆتایی
+            // ئەگەر دوای ٤٠ چرکە هیچی نەکرد، باشترینەکەی وەردەگرین
             setTimeout(() => {
                 if (watchID && bestPosition) {
                     stopAndSave(bestPosition, branchID, branchName);
@@ -169,22 +170,18 @@
         btnText.innerText = "خەریکی پاشەکەوتکردنم...";
 
         try {
-            const { latitude, longitude } = position.coords;
-
-            // گونجاندن لەگەڵ تەیبڵی offices
+            const { latitude, longitude, accuracy } = position.coords;
             const { error } = await _supabase
-                .from('offices') 
+                .from('branches')
                 .insert([{ 
-                    office_id: parseInt(bID), 
-                    office_name: bName, 
-                    lat: latitude, 
-                    long: longitude,
-                    radius_meters: 100 // بازنەی ڕێپێدراوی ستاندارد (١٠٠ مەتر)
+                    branch_id: parseInt(bID), 
+                    branch_name: bName, 
+                    latitude, longitude, accuracy 
                 }]);
 
             if (error) throw error;
 
-            showStatus(`بنکەی (${bName}) بە سەرکەوتوویی تۆمار کرا!`, "success");
+            showStatus(`سەرکەوتوو بوو! (وردی: ${Math.round(accuracy)} مەتر)`, "success");
             document.getElementById('branchID').value = "";
             document.getElementById('branchName').value = "";
         } catch (err) {
